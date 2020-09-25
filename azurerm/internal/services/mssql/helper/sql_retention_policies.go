@@ -66,6 +66,10 @@ func ShortTermRetentionPolicySchema() *schema.Schema {
 }
 
 func ExpandLongTermRetentionPolicy(input []interface{}) *sql.LongTermRetentionPolicyProperties {
+	if len(input) == 0 {
+		return nil
+	}
+
 	longTermRetentionPolicy := input[0].(map[string]interface{})
 
 	longTermPolicyProperties := sql.LongTermRetentionPolicyProperties{
@@ -130,6 +134,10 @@ func FlattenLongTermRetentionPolicy(longTermRetentionPolicy *sql.BackupLongTermR
 }
 
 func ExpandShortTermRetentionPolicy(input []interface{}) *sql.BackupShortTermRetentionPolicyProperties {
+	if len(input) == 0 {
+		return nil
+	}
+
 	shortTermRetentionPolicy := input[0].(map[string]interface{})
 
 	shortTermPolicyProperties := sql.BackupShortTermRetentionPolicyProperties{

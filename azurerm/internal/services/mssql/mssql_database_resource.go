@@ -442,32 +442,56 @@ func resourceArmMsSqlDatabaseCreateUpdate(d *schema.ResourceData, meta interface
 		}
 	}
 
-	longTermRetentionProps := d.Get("long_term_retention_policy").([]interface{})
-	longTermRetentionPolicy := sql.BackupLongTermRetentionPolicy{
-		LongTermRetentionPolicyProperties: helper.ExpandLongTermRetentionPolicy(longTermRetentionProps),
-	}
+	if v, ok := d.GetOk("long_term_retention_policy"); ok {
+		longTermRetentionProps := helper.ExpandLongTermRetentionPolicy(v.([]interface{}))
+		if longTermRetentionProps != nil {
+			longTermRetentionPolicy := sql.BackupLongTermRetentionPolicy{
+				LongTermRetentionPolicyProperties: longTermRetentionProps,
+			}
 
-	longTermRetentionfuture, err := longTermRetentionClient.CreateOrUpdate(ctx, serverId.ResourceGroup, serverId.Name, name, longTermRetentionPolicy)
-	if err != nil {
-		return fmt.Errorf("Error issuing create/update request for Sql Server %q (Database %q) Long Term Retention Policies (Resource Group %q): %+v", serverId.Name, name, serverId.ResourceGroup, err)
-	}
+			longTermRetentionfuture, err := longTermRetentionClient.CreateOrUpdate(ctx, serverId.ResourceGroup, serverId.Name, name, longTermRetentionPolicy)
+			if err != nil {
+				return fmt.Errorf("Error issuing create/update request for Sql Server %q (Database %q) Long Term Retention Policies (Resource Group %q): %+v", serverId.Name, name, serverId.ResourceGroup, err)
+			}
 
-	if err = longTermRetentionfuture.WaitForCompletionRef(ctx, longTermRetentionClient.Client); err != nil {
-		return fmt.Errorf("Error waiting for completion of Create/Update for Sql Server %q (Database %q) Long Term Retention Policies (Resource Group %q): %+v", serverId.Name, name, serverId.ResourceGroup, err)
+			if err = longTermRetentionfuture.WaitForCompletionRef(ctx, longTermRetentionClient.Client); err != nil {
+				return fmt.Errorf("Error waiting for completion of Create/Update for Sql Server %q (Database %q) Long Term Retention Policies (Resource Group %q): %+v", serverId.Name, name, serverId.ResourceGroup, err)
+			}
+		}
 	}
+	/*
+		if d.HasChange("gateway_ip_configuration") {
+			oldRaw, newRaw := d.GetChange("gateway_ip_configuration")
+			oldVS := oldRaw.([]interface{})
+			newVS := newRaw.([]interface{})
 
-	backupShortTermPolicyProps := d.Get("retention_days").([]interface{})
-	backupShortTermPolicy := sql.BackupShortTermRetentionPolicy{
-		BackupShortTermRetentionPolicyProperties: helper.ExpandShortTermRetentionPolicy(backupShortTermPolicyProps),
-	}
+			// If we're creating the application gateway return the current gateway ip configuration.
+			if len(oldVS) == 0 {
+				return &results, false
+			}
 
-	shortTermRetentionFuture, err := shortTermRetentionClient.CreateOrUpdate(ctx, serverId.ResourceGroup, serverId.Name, name, backupShortTermPolicy)
-	if err != nil {
-		return fmt.Errorf("Error issuing create/update request for Sql Server %q (Database %q) Short Term Retention Policies (Resource Group %q): %+v", serverId.Name, name, serverId.ResourceGroup, err)
-	}
+			// The application gateway needs to be stopped if a gateway ip configuration is added or removed
+			if len(oldVS) != len(newVS) {
+				return &results, true
+			}
+		}
+	*/
+	if v, ok := d.GetOk("retention_days"); ok {
+		backupShortTermPolicyProps := helper.ExpandShortTermRetentionPolicy(v.([]interface{}))
+		if backupShortTermPolicyProps != nil {
+			backupShortTermPolicy := sql.BackupShortTermRetentionPolicy{
+				BackupShortTermRetentionPolicyProperties: backupShortTermPolicyProps,
+			}
 
-	if err = shortTermRetentionFuture.WaitForCompletionRef(ctx, client.Client); err != nil {
-		return fmt.Errorf("Error waiting for completion of Create/Update for Sql Server %q (Database %q) Short Term Retention Policies (Resource Group %q): %+v", serverId.Name, name, serverId.ResourceGroup, err)
+			shortTermRetentionFuture, err := shortTermRetentionClient.CreateOrUpdate(ctx, serverId.ResourceGroup, serverId.Name, name, backupShortTermPolicy)
+			if err != nil {
+				return fmt.Errorf("Error issuing create/update request for Sql Server %q (Database %q) Short Term Retention Policies (Resource Group %q): %+v", serverId.Name, name, serverId.ResourceGroup, err)
+			}
+
+			if err = shortTermRetentionFuture.WaitForCompletionRef(ctx, client.Client); err != nil {
+				return fmt.Errorf("Error waiting for completion of Create/Update for Sql Server %q (Database %q) Short Term Retention Policies (Resource Group %q): %+v", serverId.Name, name, serverId.ResourceGroup, err)
+			}
+		}
 	}
 
 	return resourceArmMsSqlDatabaseRead(d, meta)
